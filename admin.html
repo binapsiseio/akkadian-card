@@ -9,31 +9,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="./style.css">
+<style>
+.hidden{display:none!important}
+.admin-status{margin-top:12px;color:var(--gold-soft);line-height:1.7}
+.inline-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.inline-actions button{width:auto;min-width:92px;padding:9px 12px;min-height:auto;font-size:.9rem}
+.csv-note{font-size:.9rem;line-height:1.7;opacity:.9}
+</style>
 </head>
-
 <body>
 <main class="page">
 
 <header class="header">
   <div class="english">admin page</div>
-  <div class="title">
-    <span class="an-sign">𒀭</span>
-    <span>管理画面</span>
-  </div>
+  <div class="title"><span class="an-sign">𒀭</span><span>管理画面</span></div>
   <div class="divider">◆</div>
 </header>
 
-<section class="panel">
+<section class="panel" id="loginPanel">
   <h2>ログイン</h2>
-  <input type="email" id="email" placeholder="メールアドレス">
-  <input type="password" id="password" placeholder="パスワード">
+  <input type="email" id="email" placeholder="メールアドレス" autocomplete="username">
+  <input type="password" id="password" placeholder="パスワード" autocomplete="current-password">
   <div class="admin-grid">
     <button onclick="login()">ログイン</button>
-    <button onclick="logout()">ログアウト</button>
+    <a class="button-link" href="./index.html">学習画面へ戻る</a>
   </div>
+  <div class="admin-status" id="loginStatus">ログインすると管理機能が表示されます。</div>
 </section>
 
-<section class="panel">
+<div id="adminArea" class="hidden">
+
+<section class="panel" id="editPanel">
   <h2>単語登録・編集</h2>
   <input type="hidden" id="editId">
   <input type="text" id="front" placeholder="表：音写">
@@ -51,19 +57,21 @@
     <button onclick="downloadCSV()">CSVダウンロード</button>
     <button onclick="uploadCSV()">CSV一括アップロード</button>
   </div>
-  <input type="file" id="csvFile" accept=".csv">
-  <p>CSV形式：front,back,note</p>
+  <input type="file" id="csvFile" accept=".csv,text/csv">
+  <p class="csv-note">CSV形式：front,back,note<br>Excelで作る場合は「CSV UTF-8」で保存してください。Shift_JISも可能な範囲で自動判定します。</p>
 </section>
 
 <section class="panel">
   <h2>登録単語一覧</h2>
+  <div class="admin-status" id="adminStatus"></div>
   <div class="list" id="list">読み込み中...</div>
 </section>
 
-<div class="admin-small">
-  <a href="./index.html">学習画面へ戻る</a>
-</div>
+<section class="panel">
+  <button class="danger" onclick="logout()">ログアウト</button>
+</section>
 
+</div>
 </main>
 
 <script>
@@ -72,7 +80,9 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_W_e4VNpoaM1mdtmmNi6f8w_ijLC-Yw5"
 );
 
-let cards=[];
+let cards = [];
+let currentSession = null;
+let isAuthChanging = false;
 
 function escapeHtml(text){
   return String(text || "")
@@ -83,103 +93,140 @@ function escapeHtml(text){
     .replaceAll("'","&#039;");
 }
 
+function setLoginStatus(message){
+  document.getElementById("loginStatus").textContent = message || "";
+}
+
+function setAdminStatus(message){
+  const el = document.getElementById("adminStatus");
+  if(el) el.textContent = message || "";
+}
+
+function showAdminArea(show){
+  document.getElementById("adminArea").classList.toggle("hidden", !show);
+}
+
+async function checkLogin(){
+  const result = await supabaseClient.auth.getSession();
+  currentSession = result.data.session;
+  showAdminArea(!!currentSession);
+  if(currentSession){
+    setLoginStatus("ログイン中: " + currentSession.user.email);
+    return true;
+  }
+  setLoginStatus("ログインすると管理機能が表示されます。");
+  return false;
+}
+
 async function login(){
-  const email=document.getElementById("email").value.trim();
-  const password=document.getElementById("password").value;
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
 
-  const {error}=await supabaseClient.auth.signInWithPassword({email,password});
-  if(error){alert(error.message);return;}
+  if(!email || !password){
+    alert("メールアドレスとパスワードを入力してください");
+    return;
+  }
 
-  alert("ログイン成功");
-  loadCards();
+  const result = await supabaseClient.auth.signInWithPassword({email,password});
+
+  if(result.error){
+    alert("ログインできません: " + result.error.message);
+    return;
+  }
+
+  currentSession = result.data.session;
+  showAdminArea(true);
+  setLoginStatus("ログイン中: " + currentSession.user.email);
+  await loadCards();
 }
 
 async function logout(){
   await supabaseClient.auth.signOut();
-  alert("ログアウトしました");
+  currentSession = null;
+  cards = [];
+  clearForm();
+  document.getElementById("list").textContent = "";
+  showAdminArea(false);
+  setLoginStatus("ログアウトしました。");
 }
 
 async function loadCards(){
-  const {data,error}=await supabaseClient
-    .from("cards")
-    .select("*")
-    .order("front",{ascending:true});
+  const ok = await checkLogin();
+  if(!ok) return;
 
-  if(error){
-    document.getElementById("list").textContent = error.message;
+  setAdminStatus("読み込み中...");
+
+  const result = await supabaseClient
+    .from("cards")
+    .select("id,front,back,note,created_at")
+    .order("front", { ascending:true });
+
+  if(result.error){
+    setAdminStatus("読み込みエラー: " + result.error.message);
+    document.getElementById("list").textContent = "";
     return;
   }
 
-  cards=data||[];
+  cards = result.data || [];
+  setAdminStatus(cards.length + "件の単語を読み込みました。");
   renderList();
 }
 
 function renderList(){
-  const area=document.getElementById("list");
+  const area = document.getElementById("list");
 
-  if(cards.length===0){
-    area.textContent="登録単語なし";
+  if(!currentSession){
+    area.textContent = "";
     return;
   }
 
-  area.innerHTML=cards.map((c,i)=>`
+  if(cards.length === 0){
+    area.textContent = "登録単語なし";
+    return;
+  }
+
+  area.innerHTML = cards.map((c,i)=>`
     <div class="item">
       <strong>${escapeHtml(c.front)}</strong> / ${escapeHtml(c.back)}
       ${c.note ? '<br><small>' + escapeHtml(c.note) + '</small>' : ''}
-      <br>
-      <button onclick="editCard(${i})">編集</button>
-      <button class="danger" onclick="deleteCard('${c.id}')">削除</button>
+      <div class="inline-actions">
+        <button onclick="editCard(${i})">編集</button>
+        <button class="danger" onclick="deleteCard('${c.id}')">削除</button>
+      </div>
     </div>
   `).join("");
 }
 
 function editCard(i){
   const c = cards[i];
+  if(!c) return;
 
-  const newFront = prompt("表：音写", c.front);
-  if(newFront === null) return;
+  document.getElementById("editId").value = c.id;
+  document.getElementById("front").value = c.front || "";
+  document.getElementById("back").value = c.back || "";
+  document.getElementById("note").value = c.note || "";
 
-  const newBack = prompt("裏：意味", c.back);
-  if(newBack === null) return;
-
-  const newNote = prompt("例文・メモ", c.note || "");
-  if(newNote === null) return;
-
-  updateCard(c.id, newFront.trim(), newBack.trim(), newNote.trim());
-}
-
-async function updateCard(id, front, back, note){
-  if(!front || !back){
-    alert("表と裏は必須です");
-    return;
-  }
-
-  const {error} = await supabaseClient
-    .from("cards")
-    .update({front, back, note})
-    .eq("id", id);
-
-  if(error){
-    alert(error.message);
-    return;
-  }
-
-  await loadCards();
-  alert("更新しました");
+  document.getElementById("editPanel").scrollIntoView({behavior:"smooth", block:"start"});
 }
 
 function clearForm(){
-  document.getElementById("editId").value="";
-  document.getElementById("front").value="";
-  document.getElementById("back").value="";
-  document.getElementById("note").value="";
+  document.getElementById("editId").value = "";
+  document.getElementById("front").value = "";
+  document.getElementById("back").value = "";
+  document.getElementById("note").value = "";
 }
 
 async function saveCard(){
-  const id=document.getElementById("editId").value;
-  const front=document.getElementById("front").value.trim();
-  const back=document.getElementById("back").value.trim();
-  const note=document.getElementById("note").value.trim();
+  const ok = await checkLogin();
+  if(!ok){
+    alert("ログインが必要です");
+    return;
+  }
+
+  const id = document.getElementById("editId").value;
+  const front = document.getElementById("front").value.trim();
+  const back = document.getElementById("back").value.trim();
+  const note = document.getElementById("note").value.trim();
 
   if(!front || !back){
     alert("表と裏は必須です");
@@ -187,26 +234,51 @@ async function saveCard(){
   }
 
   let result;
+
   if(id){
-    result=await supabaseClient.from("cards").update({front,back,note}).eq("id",id);
+    result = await supabaseClient
+      .from("cards")
+      .update({ front, back, note })
+      .eq("id", id)
+      .select();
   }else{
-    result=await supabaseClient.from("cards").insert({front,back,note});
+    result = await supabaseClient
+      .from("cards")
+      .insert({ front, back, note })
+      .select();
   }
 
-  if(result.error){alert(result.error.message);return;}
+  if(result.error){
+    alert("保存エラー: " + result.error.message);
+    return;
+  }
 
   clearForm();
   await loadCards();
-  alert("保存しました");
+  alert(id ? "更新しました" : "登録しました");
 }
 
 async function deleteCard(id){
+  const ok = await checkLogin();
+  if(!ok){
+    alert("ログインが必要です");
+    return;
+  }
+
   if(!confirm("削除しますか？")) return;
 
-  const {error}=await supabaseClient.from("cards").delete().eq("id",id);
-  if(error){alert(error.message);return;}
+  const result = await supabaseClient
+    .from("cards")
+    .delete()
+    .eq("id", id);
 
-  loadCards();
+  if(result.error){
+    alert("削除エラー: " + result.error.message);
+    return;
+  }
+
+  await loadCards();
+  alert("削除しました");
 }
 
 function csvEscape(value){
@@ -214,72 +286,149 @@ function csvEscape(value){
 }
 
 function downloadCSV(){
-  let csv="front,back,note\n";
+  if(!currentSession){
+    alert("ログインが必要です");
+    return;
+  }
+
+  let csv = "\uFEFFfront,back,note\n";
   cards.forEach(c=>{
-    csv += [csvEscape(c.front),csvEscape(c.back),csvEscape(c.note)].join(",") + "\n";
+    csv += [csvEscape(c.front), csvEscape(c.back), csvEscape(c.note)].join(",") + "\n";
   });
 
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;
-  a.download="akkad_cards.csv";
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "akkad_cards.csv";
   a.click();
   URL.revokeObjectURL(url);
 }
 
-function parseCSVLine(line){
-  const result=[];
-  let current="";
-  let inQuotes=false;
+async function readTextWithEncoding(file){
+  const buffer = await file.arrayBuffer();
 
-  for(let i=0;i<line.length;i++){
-    const char=line[i];
-    const next=line[i+1];
+  try{
+    return new TextDecoder("utf-8", { fatal:true }).decode(buffer);
+  }catch(e){
+    try{
+      return new TextDecoder("shift_jis").decode(buffer);
+    }catch(e2){
+      return new TextDecoder("utf-8").decode(buffer);
+    }
+  }
+}
+
+function parseCSV(text){
+  text = text.replace(/^\uFEFF/, "");
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for(let i=0; i<text.length; i++){
+    const char = text[i];
+    const next = text[i+1];
 
     if(char === '"' && inQuotes && next === '"'){
-      current += '"';
+      cell += '"';
       i++;
     }else if(char === '"'){
       inQuotes = !inQuotes;
     }else if(char === "," && !inQuotes){
-      result.push(current);
-      current="";
+      row.push(cell);
+      cell = "";
+    }else if((char === "\n" || char === "\r") && !inQuotes){
+      if(char === "\r" && next === "\n") i++;
+      row.push(cell);
+      if(row.some(v => String(v).trim() !== "")){
+        rows.push(row);
+      }
+      row = [];
+      cell = "";
     }else{
-      current += char;
+      cell += char;
     }
   }
-  result.push(current);
-  return result;
+
+  row.push(cell);
+  if(row.some(v => String(v).trim() !== "")){
+    rows.push(row);
+  }
+
+  return rows;
 }
 
 async function uploadCSV(){
-  const file=document.getElementById("csvFile").files[0];
-  if(!file){alert("CSVを選択してください");return;}
+  const ok = await checkLogin();
+  if(!ok){
+    alert("ログインが必要です");
+    return;
+  }
 
-  const text=await file.text();
-  const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(line=>line.trim());
-  const rows=lines.slice(1).map(parseCSVLine).filter(row=>row[0] && row[1]);
+  const file = document.getElementById("csvFile").files[0];
+  if(!file){
+    alert("CSVを選択してください");
+    return;
+  }
 
-  if(rows.length===0){
+  const text = await readTextWithEncoding(file);
+  const rows = parseCSV(text);
+
+  if(rows.length < 2){
+    alert("CSVに登録できるデータがありません");
+    return;
+  }
+
+  const header = rows[0].map(v => String(v).trim().toLowerCase());
+  const frontIndex = header.indexOf("front");
+  const backIndex = header.indexOf("back");
+  const noteIndex = header.indexOf("note");
+
+  if(frontIndex === -1 || backIndex === -1){
+    alert("CSVの1行目に front,back,note を入れてください");
+    return;
+  }
+
+  const insertRows = rows.slice(1).map(row => ({
+    front: String(row[frontIndex] || "").trim(),
+    back: String(row[backIndex] || "").trim(),
+    note: noteIndex >= 0 ? String(row[noteIndex] || "").trim() : ""
+  })).filter(row => row.front && row.back);
+
+  if(insertRows.length === 0){
     alert("登録できる行がありません");
     return;
   }
 
-  const insertRows=rows.map(row=>({
-    front:row[0],
-    back:row[1],
-    note:row[2] || ""
-  }));
+  const result = await supabaseClient
+    .from("cards")
+    .insert(insertRows)
+    .select();
 
-  const {error}=await supabaseClient.from("cards").insert(insertRows);
-  if(error){alert(error.message);return;}
+  if(result.error){
+    alert("CSVアップロードエラー: " + result.error.message);
+    return;
+  }
 
+  document.getElementById("csvFile").value = "";
   await loadCards();
-  alert("CSVアップロード完了");
+  alert(insertRows.length + "件アップロードしました");
 }
 
-loadCards();
+supabaseClient.auth.onAuthStateChange(async (event, session)=>{
+  if(isAuthChanging) return;
+  currentSession = session;
+  showAdminArea(!!session);
+  if(session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")){
+    setLoginStatus("ログイン中: " + session.user.email);
+  }
+});
+
+(async function init(){
+  const ok = await checkLogin();
+  if(ok) await loadCards();
+})();
 </script>
 </body>
 </html>
