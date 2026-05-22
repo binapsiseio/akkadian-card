@@ -134,12 +134,38 @@ function renderList(){
 }
 
 function editCard(i){
-  const c=cards[i];
-  document.getElementById("editId").value=c.id;
-  document.getElementById("front").value=c.front;
-  document.getElementById("back").value=c.back;
-  document.getElementById("note").value=c.note||"";
-  window.scrollTo({top:0,behavior:"smooth"});
+  const c = cards[i];
+
+  const newFront = prompt("表：音写", c.front);
+  if(newFront === null) return;
+
+  const newBack = prompt("裏：意味", c.back);
+  if(newBack === null) return;
+
+  const newNote = prompt("例文・メモ", c.note || "");
+  if(newNote === null) return;
+
+  updateCard(c.id, newFront.trim(), newBack.trim(), newNote.trim());
+}
+
+async function updateCard(id, front, back, note){
+  if(!front || !back){
+    alert("表と裏は必須です");
+    return;
+  }
+
+  const {error} = await supabaseClient
+    .from("cards")
+    .update({front, back, note})
+    .eq("id", id);
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  await loadCards();
+  alert("更新しました");
 }
 
 function clearForm(){
