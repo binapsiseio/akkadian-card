@@ -20,17 +20,15 @@
   <div class="divider">◆</div>
 </header>
 
-<section class="panel" id="loginPanel">
+<section class="panel">
   <h2>ログイン</h2>
-  <input type="email" id="email" placeholder="メールアドレス" autocomplete="username">
-  <input type="password" id="password" placeholder="パスワード" autocomplete="current-password">
-
+  <input type="email" id="email" placeholder="メールアドレス">
+  <input type="password" id="password" placeholder="パスワード">
   <div class="admin-grid">
-    <button onclick="login()" type="button">ログイン</button>
-    <a class="button-link" href="./index.html">学習画面へ戻る</a>
+    <button type="button" onclick="login()">ログイン</button>
+    <button type="button" class="danger" onclick="logout()">ログアウト</button>
   </div>
-
-  <div class="admin-status" id="loginStatus">ログインすると管理機能が表示されます。</div>
+  <div class="admin-status" id="loginStatus">ログインしてください。</div>
 </section>
 
 <div id="adminArea" class="hidden">
@@ -40,8 +38,7 @@
 
   <input type="text" id="newLevelName" placeholder="新しいレベル名">
   <input type="number" id="newLevelOrder" placeholder="並び順 例: 10">
-
-  <button onclick="addLevel()" type="button">レベル追加</button>
+  <button type="button" onclick="addLevel()">レベル追加</button>
 
   <div class="admin-status" id="levelStatus"></div>
   <div class="level-admin-list" id="levelList"></div>
@@ -57,8 +54,8 @@
   <select id="level"></select>
 
   <div class="admin-grid">
-    <button onclick="saveCard()" type="button">保存</button>
-    <button onclick="clearForm()" type="button">クリア</button>
+    <button type="button" onclick="saveCard()">保存</button>
+    <button type="button" onclick="clearForm()">クリア</button>
   </div>
 </section>
 
@@ -66,8 +63,8 @@
   <h2>CSV管理</h2>
 
   <div class="admin-grid">
-    <button onclick="downloadCSV()" type="button">CSVダウンロード</button>
-    <button onclick="uploadCSV()" type="button">CSV一括アップロード</button>
+    <button type="button" onclick="downloadCSV()">CSVダウンロード</button>
+    <button type="button" onclick="uploadCSV()">CSV一括アップロード</button>
   </div>
 
   <input type="file" id="csvFile" accept=".csv,text/csv">
@@ -76,15 +73,14 @@
 
 <section class="panel">
   <h2>登録単語一覧</h2>
-
   <div class="admin-status" id="adminStatus"></div>
-  <div class="list" id="list">読み込み中...</div>
+  <div class="list" id="list"></div>
 </section>
 
-<section class="panel">
-  <button class="danger" onclick="logout()" type="button">ログアウト</button>
-</section>
+</div>
 
+<div class="admin-small">
+  <a href="./index.html">学習画面へ戻る</a>
 </div>
 
 </main>
@@ -108,51 +104,33 @@ function escapeHtml(text){
     .replaceAll("'","&#039;");
 }
 
-function setLoginStatus(message){
-  document.getElementById("loginStatus").textContent = message || "";
-}
-
-function setAdminStatus(message){
-  document.getElementById("adminStatus").textContent = message || "";
-}
-
-function setLevelStatus(message){
-  document.getElementById("levelStatus").textContent = message || "";
-}
-
-function showAdminArea(show){
+function showAdmin(show){
   document.getElementById("adminArea").classList.toggle("hidden", !show);
 }
 
-function clearAdminView(){
-  cards = [];
-  levels = [];
-
-  clearForm();
-
-  document.getElementById("list").textContent = "";
-  document.getElementById("levelList").textContent = "";
-  document.getElementById("adminStatus").textContent = "";
-  document.getElementById("levelStatus").textContent = "";
-  document.getElementById("level").innerHTML = "";
-  document.getElementById("csvFile").value = "";
-  document.getElementById("newLevelName").value = "";
-  document.getElementById("newLevelOrder").value = "";
+function setText(id, text){
+  const el = document.getElementById(id);
+  if(el) el.textContent = text || "";
 }
 
-async function checkLogin(){
+function clearAdminScreen(){
+  cards = [];
+  levels = [];
+  document.getElementById("list").innerHTML = "";
+  document.getElementById("levelList").innerHTML = "";
+  document.getElementById("level").innerHTML = "";
+  document.getElementById("adminStatus").textContent = "";
+  document.getElementById("levelStatus").textContent = "";
+  document.getElementById("newLevelName").value = "";
+  document.getElementById("newLevelOrder").value = "";
+  document.getElementById("csvFile").value = "";
+  clearForm();
+}
+
+async function getSession(){
   const result = await supabaseClient.auth.getSession();
-  currentSession = result.data.session;
-
-  if(currentSession){
-    showAdminArea(true);
-    setLoginStatus("ログイン中: " + currentSession.user.email);
-    return true;
-  }
-
-  showAdminArea(false);
-  setLoginStatus("ログインすると管理機能が表示されます。");
-  return false;
+  currentSession = result.data.session || null;
+  return currentSession;
 }
 
 async function login(){
@@ -164,16 +142,21 @@ async function login(){
     return;
   }
 
+  setText("loginStatus", "ログイン中...");
+
   const result = await supabaseClient.auth.signInWithPassword({ email, password });
 
   if(result.error){
+    currentSession = null;
+    showAdmin(false);
+    setText("loginStatus", "ログイン失敗");
     alert("ログインできません: " + result.error.message);
     return;
   }
 
   currentSession = result.data.session;
-  showAdminArea(true);
-  setLoginStatus("ログイン中: " + currentSession.user.email);
+  showAdmin(true);
+  setText("loginStatus", "ログイン中: " + currentSession.user.email);
 
   await loadAll();
 }
@@ -182,13 +165,27 @@ async function logout(){
   await supabaseClient.auth.signOut();
 
   currentSession = null;
-  clearAdminView();
-  showAdminArea(false);
-  setLoginStatus("ログアウトしました。");
+  clearAdminScreen();
+  showAdmin(false);
+  setText("loginStatus", "ログアウトしました。");
+}
+
+async function ensureLogin(){
+  const session = await getSession();
+
+  if(!session){
+    showAdmin(false);
+    setText("loginStatus", "ログインしてください。");
+    return false;
+  }
+
+  showAdmin(true);
+  setText("loginStatus", "ログイン中: " + session.user.email);
+  return true;
 }
 
 async function loadAll(){
-  const ok = await checkLogin();
+  const ok = await ensureLogin();
   if(!ok) return;
 
   await loadLevels();
@@ -196,28 +193,26 @@ async function loadAll(){
 }
 
 async function loadLevels(){
-  const ok = await checkLogin();
+  const ok = await ensureLogin();
   if(!ok) return;
 
-  setLevelStatus("レベル読み込み中...");
+  setText("levelStatus", "レベル読み込み中...");
 
   const result = await supabaseClient
     .from("levels")
-    .select("*")
+    .select("id,name,sort_order,created_at")
     .order("sort_order", { ascending:true })
     .order("name", { ascending:true });
 
   if(result.error){
-    setLevelStatus("レベル読み込みエラー: " + result.error.message);
+    setText("levelStatus", "レベル読み込みエラー: " + result.error.message);
     return;
   }
 
   levels = result.data || [];
-
   renderLevelOptions();
   renderLevelList();
-
-  setLevelStatus(levels.length + "件のレベルを読み込みました。");
+  setText("levelStatus", levels.length + "件のレベルを読み込みました。");
 }
 
 function renderLevelOptions(){
@@ -228,37 +223,27 @@ function renderLevelOptions(){
     return;
   }
 
-  select.innerHTML = levels.map(level => {
-    return `<option value="${escapeHtml(level.name)}">${escapeHtml(level.name)}</option>`;
-  }).join("");
+  select.innerHTML = levels.map(level =>
+    '<option value="' + escapeHtml(level.name) + '">' + escapeHtml(level.name) + '</option>'
+  ).join("");
 }
 
 function renderLevelList(){
   const area = document.getElementById("levelList");
 
   if(levels.length === 0){
-    area.innerHTML = '<p class="empty-message">レベル未登録</p>';
+    area.innerHTML = '<div class="empty-message">レベル未登録</div>';
     return;
   }
 
-  area.innerHTML = levels.map(level => `
+  area.innerHTML = levels.map((level, index) => `
     <div class="level-admin-item">
       <div style="width:100%;">
-        <input
-          type="text"
-          id="levelName_${level.id}"
-          value="${escapeHtml(level.name)}"
-          placeholder="レベル名"
-        >
-        <input
-          type="number"
-          id="levelOrder_${level.id}"
-          value="${escapeHtml(level.sort_order)}"
-          placeholder="並び順"
-        >
+        <input type="text" id="levelName_${index}" value="${escapeHtml(level.name)}" placeholder="レベル名">
+        <input type="number" id="levelOrder_${index}" value="${escapeHtml(level.sort_order)}" placeholder="並び順">
         <div class="inline-actions">
-          <button onclick="updateLevel('${level.id}')" type="button">更新</button>
-          <button class="danger" onclick="deleteLevel('${level.id}', '${escapeHtml(level.name)}')" type="button">削除</button>
+          <button type="button" onclick="updateLevel(${index})">更新</button>
+          <button type="button" class="danger" onclick="deleteLevel(${index})">削除</button>
         </div>
       </div>
     </div>
@@ -266,15 +251,12 @@ function renderLevelList(){
 }
 
 async function addLevel(){
-  const ok = await checkLogin();
-  if(!ok){
-    alert("ログインが必要です");
-    return;
-  }
+  const ok = await ensureLogin();
+  if(!ok) return;
 
   const name = document.getElementById("newLevelName").value.trim();
-  const sortOrderRaw = document.getElementById("newLevelOrder").value;
-  const sort_order = sortOrderRaw ? Number(sortOrderRaw) : 100;
+  const sortOrderInput = document.getElementById("newLevelOrder").value;
+  const sort_order = sortOrderInput ? Number(sortOrderInput) : 100;
 
   if(!name){
     alert("レベル名を入力してください");
@@ -298,28 +280,27 @@ async function addLevel(){
   alert("レベルを追加しました");
 }
 
-async function updateLevel(id){
-  const ok = await checkLogin();
-  if(!ok){
-    alert("ログインが必要です");
-    return;
-  }
+async function updateLevel(index){
+  const ok = await ensureLogin();
+  if(!ok) return;
 
-  const name = document.getElementById("levelName_" + id).value.trim();
-  const sort_order = Number(document.getElementById("levelOrder_" + id).value || 100);
+  const level = levels[index];
+  if(!level) return;
 
-  if(!name){
+  const newName = document.getElementById("levelName_" + index).value.trim();
+  const sort_order = Number(document.getElementById("levelOrder_" + index).value || 100);
+
+  if(!newName){
     alert("レベル名を入力してください");
     return;
   }
 
-  const oldLevel = levels.find(level => level.id === id);
-  const oldName = oldLevel ? oldLevel.name : "";
+  const oldName = level.name;
 
   const result = await supabaseClient
     .from("levels")
-    .update({ name, sort_order })
-    .eq("id", id)
+    .update({ name:newName, sort_order })
+    .eq("id", level.id)
     .select();
 
   if(result.error){
@@ -327,14 +308,14 @@ async function updateLevel(id){
     return;
   }
 
-  if(oldName && oldName !== name){
-    const updateCards = await supabaseClient
+  if(oldName !== newName){
+    const cardUpdate = await supabaseClient
       .from("cards")
-      .update({ level:name })
+      .update({ level:newName })
       .eq("level", oldName);
 
-    if(updateCards.error){
-      alert("レベル名は更新しましたが、単語側の更新に失敗しました: " + updateCards.error.message);
+    if(cardUpdate.error){
+      alert("レベル名は更新しましたが、単語側の更新に失敗しました: " + cardUpdate.error.message);
     }
   }
 
@@ -342,26 +323,26 @@ async function updateLevel(id){
   alert("レベルを更新しました");
 }
 
-async function deleteLevel(id, name){
-  const ok = await checkLogin();
-  if(!ok){
-    alert("ログインが必要です");
+async function deleteLevel(index){
+  const ok = await ensureLogin();
+  if(!ok) return;
+
+  const level = levels[index];
+  if(!level) return;
+
+  const used = cards.filter(card => card.level === level.name).length;
+
+  if(used > 0){
+    alert("このレベルは " + used + " 件の単語で使われています。先に単語側のレベルを変更してください。");
     return;
   }
 
-  const usedCount = cards.filter(card => card.level === name).length;
-
-  if(usedCount > 0){
-    alert("このレベルは " + usedCount + " 件の単語で使われています。先に単語側のレベルを変更してください。");
-    return;
-  }
-
-  if(!confirm("レベル「" + name + "」を削除しますか？")) return;
+  if(!confirm("レベル「" + level.name + "」を削除しますか？")) return;
 
   const result = await supabaseClient
     .from("levels")
     .delete()
-    .eq("id", id);
+    .eq("id", level.id);
 
   if(result.error){
     alert("レベル削除エラー: " + result.error.message);
@@ -373,10 +354,10 @@ async function deleteLevel(id, name){
 }
 
 async function loadCards(){
-  const ok = await checkLogin();
+  const ok = await ensureLogin();
   if(!ok) return;
 
-  setAdminStatus("単語読み込み中...");
+  setText("adminStatus", "単語読み込み中...");
 
   const result = await supabaseClient
     .from("cards")
@@ -384,26 +365,21 @@ async function loadCards(){
     .order("front", { ascending:true });
 
   if(result.error){
-    setAdminStatus("単語読み込みエラー: " + result.error.message);
-    document.getElementById("list").textContent = "";
+    setText("adminStatus", "単語読み込みエラー: " + result.error.message);
+    document.getElementById("list").innerHTML = "";
     return;
   }
 
   cards = result.data || [];
-  setAdminStatus(cards.length + "件の単語を読み込みました。");
   renderList();
+  setText("adminStatus", cards.length + "件の単語を読み込みました。");
 }
 
 function renderList(){
   const area = document.getElementById("list");
 
-  if(!currentSession){
-    area.textContent = "";
-    return;
-  }
-
   if(cards.length === 0){
-    area.textContent = "登録単語なし";
+    area.innerHTML = '<div class="empty-message">登録単語なし</div>';
     return;
   }
 
@@ -413,8 +389,8 @@ function renderList(){
       <br><small>レベル: ${escapeHtml(card.level || "未設定")}</small>
       ${card.note ? '<br><small>' + escapeHtml(card.note) + '</small>' : ''}
       <div class="inline-actions">
-        <button onclick="editCard(${index})" type="button">編集</button>
-        <button class="danger" onclick="deleteCard('${card.id}')" type="button">削除</button>
+        <button type="button" onclick="editCard(${index})">編集</button>
+        <button type="button" class="danger" onclick="deleteCard('${card.id}')">削除</button>
       </div>
     </div>
   `).join("");
@@ -453,11 +429,8 @@ function clearForm(){
 }
 
 async function saveCard(){
-  const ok = await checkLogin();
-  if(!ok){
-    alert("ログインが必要です");
-    return;
-  }
+  const ok = await ensureLogin();
+  if(!ok) return;
 
   const id = document.getElementById("editId").value;
   const front = document.getElementById("front").value.trim();
@@ -496,11 +469,8 @@ async function saveCard(){
 }
 
 async function deleteCard(id){
-  const ok = await checkLogin();
-  if(!ok){
-    alert("ログインが必要です");
-    return;
-  }
+  const ok = await ensureLogin();
+  if(!ok) return;
 
   if(!confirm("削除しますか？")) return;
 
@@ -610,12 +580,8 @@ function parseCSV(text){
 }
 
 async function uploadCSV(){
-  const ok = await checkLogin();
-
-  if(!ok){
-    alert("ログインが必要です");
-    return;
-  }
+  const ok = await ensureLogin();
+  if(!ok) return;
 
   const file = document.getElementById("csvFile").files[0];
 
@@ -672,29 +638,19 @@ async function uploadCSV(){
   alert(insertRows.length + "件アップロードしました");
 }
 
-supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  currentSession = session;
+(async function init(){
+  const session = await getSession();
 
   if(session){
-    showAdminArea(true);
-    setLoginStatus("ログイン中: " + session.user.email);
-
-    if(event === "SIGNED_IN" || event === "INITIAL_SESSION"){
-      await loadAll();
-    }
-  }else{
-    clearAdminView();
-    showAdminArea(false);
-  }
-});
-
-(async function init(){
-  const ok = await checkLogin();
-
-  if(ok){
+    showAdmin(true);
+    setText("loginStatus", "ログイン中: " + session.user.email);
     await loadAll();
+  }else{
+    showAdmin(false);
+    setText("loginStatus", "ログインしてください。");
   }
 })();
 </script>
+
 </body>
 </html>
