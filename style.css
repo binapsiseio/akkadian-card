@@ -142,8 +142,8 @@ a{
 }
 
 .mode-tab.active{
-  background:rgba(216,179,92,.24);
-  color:var(--cream);
+  background:var(--gold);
+  color:var(--navy);
   transform:translateY(1px);
 }
 
