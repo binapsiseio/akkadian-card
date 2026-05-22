@@ -26,7 +26,7 @@
 <section>
   <div class="main-meta">
     <div id="counter">- / -</div>
-    <button class="text-button" onclick="resetRandom()">⇄ シャッフル</button>
+    <button class="text-button" onclick="shuffleDeck()">⇄ シャッフル</button>
   </div>
 
   <div class="card" id="card">
@@ -37,7 +37,7 @@
 
   <div class="action-row">
     <button class="again" onclick="previousCard()">× もう一度</button>
-    <button class="remember" onclick="nextRandom()">✓ 覚えた</button>
+    <button class="remember" onclick="nextCard()">✓ 覚えた</button>
   </div>
 </section>
 
@@ -62,10 +62,9 @@ const supabaseClient = supabase.createClient(
 );
 
 let cards = [];
-let current = null;
+let deck = [];
+let position = 0;
 let showingFront = true;
-let shownIndexes = [];
-let historyIndexes = [];
 
 function escapeHtml(text){
   return String(text || "")
@@ -88,46 +87,37 @@ async function loadCards(){
   }
 
   cards = data || [];
-  shownIndexes = [];
-  historyIndexes = [];
-
-  if(cards.length > 0){
-    current = pickRandomIndex();
-    showingFront = true;
-    render();
-  }else{
-    render();
-  }
+  shuffleDeck();
 }
 
-function pickRandomIndex(){
-  if(cards.length <= 1) return 0;
+function makeShuffledDeck(){
+  deck = cards.map((_, index) => index);
 
-  if(shownIndexes.length >= cards.length){
-    shownIndexes = [];
+  for(let i = deck.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 
-  let index;
-  do{
-    index = Math.floor(Math.random() * cards.length);
-  }while(shownIndexes.includes(index) && shownIndexes.length < cards.length);
+  position = 0;
+}
 
-  shownIndexes.push(index);
-  return index;
+function getCurrentCard(){
+  if(cards.length === 0 || deck.length === 0) return null;
+  return cards[deck[position]];
 }
 
 function render(){
   const card = document.getElementById("card");
   const counter = document.getElementById("counter");
+  const c = getCurrentCard();
 
-  if(cards.length === 0 || current === null){
+  if(!c){
     counter.textContent = "0 / 0";
     card.innerHTML = '<div class="card-inner"><div class="front">カードがありません</div></div>';
     return;
   }
 
-  counter.textContent = Math.min(shownIndexes.length, cards.length) + " / " + cards.length;
-  const c = cards[current];
+  counter.textContent = (position + 1) + " / " + cards.length;
 
   if(showingFront){
     card.innerHTML = `
@@ -157,14 +147,15 @@ document.getElementById("card").addEventListener("click",()=>{
   render();
 });
 
-function nextRandom(){
+function nextCard(){
   if(cards.length === 0) return;
 
-  if(current !== null){
-    historyIndexes.push(current);
+  position++;
+
+  if(position >= deck.length){
+    makeShuffledDeck();
   }
 
-  current = pickRandomIndex();
   showingFront = true;
   render();
 }
@@ -172,18 +163,23 @@ function nextRandom(){
 function previousCard(){
   if(cards.length === 0) return;
 
-  if(historyIndexes.length > 0){
-    current = historyIndexes.pop();
+  if(position > 0){
+    position--;
   }
 
   showingFront = true;
   render();
 }
 
-function resetRandom(){
-  shownIndexes = [];
-  historyIndexes = [];
-  current = pickRandomIndex();
+function shuffleDeck(){
+  if(cards.length === 0){
+    deck = [];
+    position = 0;
+    render();
+    return;
+  }
+
+  makeShuffledDeck();
   showingFront = true;
   render();
 }
