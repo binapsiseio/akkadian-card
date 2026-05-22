@@ -10,177 +10,126 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="./style.css">
 </head>
-
 <body>
 <main class="page">
-
 <header class="header">
   <div class="english">akkadian vocabulary</div>
-  <div class="title">
-    <span class="an-sign">𒀭</span>
-    <span>アッカド語学習カード</span>
-  </div>
+  <div class="title"><span class="an-sign">𒀭</span><span>アッカド語学習カード</span></div>
   <div class="divider">◆</div>
 </header>
 
-<section>
+<div class="filter-row">
+  <label for="levelFilter">表示レベル</label>
+  <select id="levelFilter" class="level-select" onchange="applyLevelFilter()">
+    <option value="all">すべて</option>
+  </select>
+</div>
+
+<div class="tab-row">
+  <button class="tab-button active" id="studyTabButton" onclick="showTab('study')">学習</button>
+  <button class="tab-button" id="learnedTabButton" onclick="showTab('learned')">学習済み</button>
+</div>
+
+<section id="studyTab">
   <div class="main-meta">
     <div id="counter">- / -</div>
     <button class="text-button" onclick="shuffleDeck()">⇄ シャッフル</button>
   </div>
 
   <div class="card" id="card">
-    <div class="card-inner">
-      <div class="front">読み込み中...</div>
-    </div>
+    <div class="card-inner"><div class="front">読み込み中...</div></div>
   </div>
 
   <div class="action-row">
     <button class="again" onclick="previousCard()">× もう一度</button>
-    <button class="remember" onclick="nextCard()">✓ 覚えた</button>
+    <button class="remember" onclick="rememberAndNext()">✓ 覚えた</button>
   </div>
 </section>
 
-<footer class="footer">
-  参考文献: <a href="https://yobel.co.jp/info/book20260311/" target="_blank">青島忠一朗『アッカド語文法』ヨベル社,2026年</a><br><br>
-  作成者: <a href="https://x.com/binapsi_meso" target="_blank">Binapsi</a><br>
-  誤植・誤記などあれば、Xよりご連絡ください。
-  <div class="admin-small">
-    <a href="./admin.html">管理者ログイン</a>
+<section id="learnedTab" class="hidden">
+  <div class="learned-toolbar">
+    <button onclick="renderLearnedList()">再表示</button>
+    <button class="danger" onclick="clearLearned()">履歴を削除</button>
   </div>
-</footer>
+  <div class="learned-list" id="learnedList"></div>
+</section>
 
+<footer class="footer">
+  作成者: ビナプシ　X　
+  <a href="https://x.com/binapsi_meso" target="_blank">https://x.com/binapsi_meso</a><br>
+  参考文献:<br>
+  『アッカド語文法』青島忠一朗著（ヨベル社 2026）<br>
+  <a href="https://yobel.co.jp/info/book20260311/" target="_blank">https://yobel.co.jp/info/book20260311/</a>
+  <div class="admin-small"><a href="./admin.html">管理者ログイン</a></div>
+</footer>
 </main>
 
 <script>
-const supabaseClient = supabase.createClient(
-  "https://dkfltvfoxmhinnfodcvc.supabase.co",
-  "sb_publishable_W_e4VNpoaM1mdtmmNi6f8w_ijLC-Yw5"
-);
+const supabaseClient = supabase.createClient("https://dkfltvfoxmhinnfodcvc.supabase.co","sb_publishable_W_e4VNpoaM1mdtmmNi6f8w_ijLC-Yw5");
+let allCards=[],cards=[],levels=[],deck=[],position=0,showingFront=true;
+const LEARNED_KEY="akkad_learned_cards_v1";
 
-let cards = [];
-let deck = [];
-let position = 0;
-let showingFront = true;
+function escapeHtml(text){return String(text||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");}
 
-function escapeHtml(text){
-  return String(text || "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+async function loadLevels(){
+  const {data,error}=await supabaseClient.from("levels").select("*").order("sort_order",{ascending:true});
+  if(error){levels=[];return;}
+  levels=data||[];
+  const select=document.getElementById("levelFilter");
+  select.innerHTML='<option value="all">すべて</option>'+levels.map(l=>`<option value="${escapeHtml(l.name)}">${escapeHtml(l.name)}</option>`).join("");
 }
 
 async function loadCards(){
-  const { data, error } = await supabaseClient
-    .from("cards")
-    .select("*");
+  await loadLevels();
+  const {data,error}=await supabaseClient.from("cards").select("*");
+  if(error){document.getElementById("card").innerHTML='<div class="card-inner"><div class="front">読み込みエラー</div></div>';return;}
+  allCards=data||[];
+  applyLevelFilter();
+}
 
-  if(error){
-    document.getElementById("card").innerHTML =
-      '<div class="card-inner"><div class="front">読み込みエラー</div></div>';
-    return;
-  }
-
-  cards = data || [];
+function applyLevelFilter(){
+  const level=document.getElementById("levelFilter").value;
+  cards=level==="all"?allCards.slice():allCards.filter(card=>(card.level||"初級")===level);
   shuffleDeck();
 }
 
 function makeShuffledDeck(){
-  deck = cards.map((_, index) => index);
-
-  for(let i = deck.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-
-  position = 0;
+  deck=cards.map((_,index)=>index);
+  for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
+  position=0;
 }
 
-function getCurrentCard(){
-  if(cards.length === 0 || deck.length === 0) return null;
-  return cards[deck[position]];
-}
+function getCurrentCard(){if(cards.length===0||deck.length===0)return null;return cards[deck[position]];}
 
 function render(){
-  const card = document.getElementById("card");
-  const counter = document.getElementById("counter");
-  const c = getCurrentCard();
-
-  if(!c){
-    counter.textContent = "0 / 0";
-    card.innerHTML = '<div class="card-inner"><div class="front">カードがありません</div></div>';
-    return;
-  }
-
-  counter.textContent = (position + 1) + " / " + cards.length;
-
+  const card=document.getElementById("card"),counter=document.getElementById("counter"),c=getCurrentCard();
+  if(!c){counter.textContent="0 / 0";card.innerHTML='<div class="card-inner"><div class="front">カードがありません</div></div>';return;}
+  counter.textContent=(position+1)+" / "+cards.length;
   if(showingFront){
-    card.innerHTML = `
-      <div class="card-inner">
-        <div class="side-label">音写</div>
-        <div class="card-content">
-          <div class="front">${escapeHtml(c.front)}</div>
-        </div>
-      </div>
-    `;
+    card.innerHTML=`<div class="card-inner"><div class="side-label">音写</div><div class="card-content"><div class="front">${escapeHtml(c.front)}</div></div></div>`;
   }else{
-    card.innerHTML = `
-      <div class="card-inner">
-        <div class="side-label">意味</div>
-        <div class="card-content">
-          <div class="back">${escapeHtml(c.back)}</div>
-          ${c.note ? '<div class="note-line"></div><div class="note">' + escapeHtml(c.note) + '</div>' : ''}
-        </div>
-      </div>
-    `;
+    card.innerHTML=`<div class="card-inner"><div class="side-label">意味</div><div class="card-content"><div class="back">${escapeHtml(c.back)}</div>${c.note?'<div class="note-line"></div><div class="note">'+escapeHtml(c.note)+'</div>':''}</div></div>`;
   }
 }
 
-document.getElementById("card").addEventListener("click",()=>{
-  if(cards.length === 0) return;
-  showingFront = !showingFront;
-  render();
-});
+document.getElementById("card").addEventListener("click",()=>{if(cards.length===0)return;showingFront=!showingFront;render();});
 
-function nextCard(){
-  if(cards.length === 0) return;
+function nextCard(){if(cards.length===0)return;position++;if(position>=deck.length)makeShuffledDeck();showingFront=true;render();}
+function previousCard(){if(cards.length===0)return;if(position>0)position--;showingFront=true;render();}
+function shuffleDeck(){if(cards.length===0){deck=[];position=0;render();return;}makeShuffledDeck();showingFront=true;render();}
 
-  position++;
+function getLearned(){try{return JSON.parse(localStorage.getItem(LEARNED_KEY))||[];}catch(e){return[];}}
+function saveLearned(list){localStorage.setItem(LEARNED_KEY,JSON.stringify(list));}
+function rememberCurrentCard(){const c=getCurrentCard();if(!c)return;const list=getLearned();if(!list.some(item=>item.id===c.id)){list.unshift({id:c.id,front:c.front,back:c.back,note:c.note||"",level:c.level||"",learnedAt:new Date().toISOString()});saveLearned(list);}}
+function rememberAndNext(){rememberCurrentCard();nextCard();}
 
-  if(position >= deck.length){
-    makeShuffledDeck();
-  }
-
-  showingFront = true;
-  render();
+function renderLearnedList(){
+  const area=document.getElementById("learnedList"),list=getLearned();
+  if(list.length===0){area.innerHTML='<div class="empty-message">まだ学習済みの単語はありません。</div>';return;}
+  area.innerHTML=list.map(item=>`<div class="learned-item"><span class="learned-front">${escapeHtml(item.front)}</span>　<span class="learned-back">${escapeHtml(item.back)}</span><br><small>${escapeHtml(item.level||"")}</small></div>`).join("");
 }
-
-function previousCard(){
-  if(cards.length === 0) return;
-
-  if(position > 0){
-    position--;
-  }
-
-  showingFront = true;
-  render();
-}
-
-function shuffleDeck(){
-  if(cards.length === 0){
-    deck = [];
-    position = 0;
-    render();
-    return;
-  }
-
-  makeShuffledDeck();
-  showingFront = true;
-  render();
-}
-
+function clearLearned(){if(!confirm("学習済み履歴をすべて削除しますか？"))return;localStorage.removeItem(LEARNED_KEY);renderLearnedList();}
+function showTab(name){document.getElementById("studyTab").classList.toggle("hidden",name!=="study");document.getElementById("learnedTab").classList.toggle("hidden",name!=="learned");document.getElementById("studyTabButton").classList.toggle("active",name==="study");document.getElementById("learnedTabButton").classList.toggle("active",name==="learned");if(name==="learned")renderLearnedList();}
 loadCards();
 </script>
 </body>
