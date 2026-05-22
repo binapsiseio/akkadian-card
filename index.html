@@ -26,7 +26,7 @@
 <section>
   <div class="main-meta">
     <div id="counter">- / -</div>
-    <button class="text-button" onclick="nextRandom()">⇄ シャッフル</button>
+    <button class="text-button" onclick="resetRandom()">⇄ シャッフル</button>
   </div>
 
   <div class="card" id="card">
@@ -36,8 +36,8 @@
   </div>
 
   <div class="action-row">
-<button class="again" onclick="previousCard()">× もう一度</button>
-<button class="remember" onclick="nextRandom()">✓ 覚えた</button>
+    <button class="again" onclick="previousCard()">× もう一度</button>
+    <button class="remember" onclick="nextRandom()">✓ 覚えた</button>
   </div>
 </section>
 
@@ -62,7 +62,7 @@ const supabaseClient = supabase.createClient(
 );
 
 let cards = [];
-let current = 0;
+let current = null;
 let showingFront = true;
 let shownIndexes = [];
 let historyIndexes = [];
@@ -89,9 +89,12 @@ async function loadCards(){
 
   cards = data || [];
   shownIndexes = [];
+  historyIndexes = [];
 
   if(cards.length > 0){
-    nextRandom();
+    current = pickRandomIndex();
+    showingFront = true;
+    render();
   }else{
     render();
   }
@@ -117,28 +120,32 @@ function render(){
   const card = document.getElementById("card");
   const counter = document.getElementById("counter");
 
-  if(cards.length === 0){
+  if(cards.length === 0 || current === null){
     counter.textContent = "0 / 0";
     card.innerHTML = '<div class="card-inner"><div class="front">カードがありません</div></div>';
     return;
   }
 
-  counter.textContent = (shownIndexes.length || 1) + " / " + cards.length;
+  counter.textContent = Math.min(shownIndexes.length, cards.length) + " / " + cards.length;
   const c = cards[current];
 
   if(showingFront){
     card.innerHTML = `
       <div class="card-inner">
         <div class="side-label">音写</div>
-        <div class="front">${escapeHtml(c.front)}</div>
+        <div class="card-content">
+          <div class="front">${escapeHtml(c.front)}</div>
+        </div>
       </div>
     `;
   }else{
     card.innerHTML = `
       <div class="card-inner">
         <div class="side-label">意味</div>
-        <div class="back">${escapeHtml(c.back)}</div>
-        ${c.note ? '<div class="note-line"></div><div class="note">' + escapeHtml(c.note) + '</div>' : ''}
+        <div class="card-content">
+          <div class="back">${escapeHtml(c.back)}</div>
+          ${c.note ? '<div class="note-line"></div><div class="note">' + escapeHtml(c.note) + '</div>' : ''}
+        </div>
       </div>
     `;
   }
@@ -153,7 +160,7 @@ document.getElementById("card").addEventListener("click",()=>{
 function nextRandom(){
   if(cards.length === 0) return;
 
-  if(typeof current === "number"){
+  if(current !== null){
     historyIndexes.push(current);
   }
 
@@ -169,6 +176,14 @@ function previousCard(){
     current = historyIndexes.pop();
   }
 
+  showingFront = true;
+  render();
+}
+
+function resetRandom(){
+  shownIndexes = [];
+  historyIndexes = [];
+  current = pickRandomIndex();
   showingFront = true;
   render();
 }
