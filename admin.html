@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理画面｜アッカド語学習カード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+<main class="page">
+
+<header class="header">
+  <div class="english">admin page</div>
+  <div class="title">
+    <span class="an-sign">𒀭</span>
+    <span>管理画面</span>
+  </div>
+  <div class="divider">◆</div>
+</header>
+
+<section class="panel">
+  <h2>ログイン</h2>
+  <input type="email" id="email" placeholder="メールアドレス">
+  <input type="password" id="password" placeholder="パスワード">
+  <div class="admin-grid">
+    <button onclick="login()">ログイン</button>
+    <button onclick="logout()">ログアウト</button>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>単語登録・編集</h2>
+  <input type="hidden" id="editId">
+  <input type="text" id="front" placeholder="表：音写">
+  <input type="text" id="back" placeholder="裏：意味">
+  <textarea id="note" placeholder="例文・メモ"></textarea>
+  <div class="admin-grid">
+    <button onclick="saveCard()">保存</button>
+    <button onclick="clearForm()">クリア</button>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>CSV管理</h2>
+  <div class="admin-grid">
+    <button onclick="downloadCSV()">CSVダウンロード</button>
+    <button onclick="uploadCSV()">CSV一括アップロード</button>
+  </div>
+  <input type="file" id="csvFile" accept=".csv">
+  <p>CSV形式：front,back,note</p>
+</section>
+
+<section class="panel">
+  <h2>登録単語一覧</h2>
+  <div class="list" id="list">読み込み中...</div>
+</section>
+
+<div class="admin-small">
+  <a href="./index.html">学習画面へ戻る</a>
+</div>
+
+</main>
+
+<script>
+const supabaseClient = supabase.createClient(
+  "https://dkfltvfoxmhinnfodcvc.supabase.co",
+  "sb_publishable_W_e4VNpoaM1mdtmmNi6f8w_ijLC-Yw5"
+);
+
+let cards=[];
+
+function escapeHtml(text){
+  return String(text || "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+async function login(){
+  const email=document.getElementById("email").value.trim();
+  const password=document.getElementById("password").value;
+
+  const {error}=await supabaseClient.auth.signInWithPassword({email,password});
+  if(error){alert(error.message);return;}
+
+  alert("ログイン成功");
+  loadCards();
+}
+
+async function logout(){
+  await supabaseClient.auth.signOut();
+  alert("ログアウトしました");
+}
+
+async function loadCards(){
+  const {data,error}=await supabaseClient
+    .from("cards")
+    .select("*")
+    .order("front",{ascending:true});
+
+  if(error){
+    document.getElementById("list").textContent = error.message;
+    return;
+  }
+
+  cards=data||[];
+  renderList();
+}
+
+function renderList(){
+  const area=document.getElementById("list");
+
+  if(cards.length===0){
+    area.textContent="登録単語なし";
+    return;
+  }
+
+  area.innerHTML=cards.map((c,i)=>`
+    <div class="item">
+      <strong>${escapeHtml(c.front)}</strong> / ${escapeHtml(c.back)}
+      ${c.note ? '<br><small>' + escapeHtml(c.note) + '</small>' : ''}
+      <br>
+      <button onclick="editCard(${i})">編集</button>
+      <button class="danger" onclick="deleteCard('${c.id}')">削除</button>
+    </div>
+  `).join("");
+}
+
+function editCard(i){
+  const c=cards[i];
+  document.getElementById("editId").value=c.id;
+  document.getElementById("front").value=c.front;
+  document.getElementById("back").value=c.back;
+  document.getElementById("note").value=c.note||"";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function clearForm(){
+  document.getElementById("editId").value="";
+  document.getElementById("front").value="";
+  document.getElementById("back").value="";
+  document.getElementById("note").value="";
+}
+
+async function saveCard(){
+  const id=document.getElementById("editId").value;
+  const front=document.getElementById("front").value.trim();
+  const back=document.getElementById("back").value.trim();
+  const note=document.getElementById("note").value.trim();
+
+  if(!front || !back){
+    alert("表と裏は必須です");
+    return;
+  }
+
+  let result;
+  if(id){
+    result=await supabaseClient.from("cards").update({front,back,note}).eq("id",id);
+  }else{
+    result=await supabaseClient.from("cards").insert({front,back,note});
+  }
+
+  if(result.error){alert(result.error.message);return;}
+
+  clearForm();
+  await loadCards();
+  alert("保存しました");
+}
+
+async function deleteCard(id){
+  if(!confirm("削除しますか？")) return;
+
+  const {error}=await supabaseClient.from("cards").delete().eq("id",id);
+  if(error){alert(error.message);return;}
+
+  loadCards();
+}
+
+function csvEscape(value){
+  return '"' + String(value || "").replaceAll('"','""') + '"';
+}
+
+function downloadCSV(){
+  let csv="front,back,note\n";
+  cards.forEach(c=>{
+    csv += [csvEscape(c.front),csvEscape(c.back),csvEscape(c.note)].join(",") + "\n";
+  });
+
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="akkad_cards.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseCSVLine(line){
+  const result=[];
+  let current="";
+  let inQuotes=false;
+
+  for(let i=0;i<line.length;i++){
+    const char=line[i];
+    const next=line[i+1];
+
+    if(char === '"' && inQuotes && next === '"'){
+      current += '"';
+      i++;
+    }else if(char === '"'){
+      inQuotes = !inQuotes;
+    }else if(char === "," && !inQuotes){
+      result.push(current);
+      current="";
+    }else{
+      current += char;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+async function uploadCSV(){
+  const file=document.getElementById("csvFile").files[0];
+  if(!file){alert("CSVを選択してください");return;}
+
+  const text=await file.text();
+  const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(line=>line.trim());
+  const rows=lines.slice(1).map(parseCSVLine).filter(row=>row[0] && row[1]);
+
+  if(rows.length===0){
+    alert("登録できる行がありません");
+    return;
+  }
+
+  const insertRows=rows.map(row=>({
+    front:row[0],
+    back:row[1],
+    note:row[2] || ""
+  }));
+
+  const {error}=await supabaseClient.from("cards").insert(insertRows);
+  if(error){alert(error.message);return;}
+
+  await loadCards();
+  alert("CSVアップロード完了");
+}
+
+loadCards();
+</script>
+</body>
+</html>

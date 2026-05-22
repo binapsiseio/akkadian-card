@@ -1,0 +1,246 @@
+
+:root{
+  --bg:#283D6E;
+  --card:#E7D0A9;
+  --navy:#17264A;
+  --gold:#D8B35C;
+  --gold-soft:#E8CF8A;
+  --cream:#FFF7E4;
+  --red:#E36B6B;
+  --green:#75D89A;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  background:var(--bg);
+  color:var(--cream);
+  font-family:"Noto Serif JP","Yu Mincho","Hiragino Mincho ProN",serif;
+  letter-spacing:.04em;
+}
+
+a{color:var(--cream)}
+
+.page{
+  width:min(920px,100%);
+  margin:0 auto;
+  padding:54px 18px 36px;
+}
+
+.header{
+  text-align:center;
+  margin-bottom:54px;
+}
+
+.english{
+  color:var(--gold-soft);
+  font-size:1.05rem;
+  letter-spacing:.34em;
+  text-transform:lowercase;
+  margin-bottom:22px;
+}
+
+.title{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+  color:var(--cream);
+  font-size:clamp(2.1rem,6vw,4.6rem);
+  font-weight:400;
+  line-height:1.25;
+}
+
+.an-sign{
+  color:var(--gold);
+  font-size:1.05em;
+}
+
+.divider{
+  width:280px;
+  max-width:55%;
+  margin:28px auto 0;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  color:var(--gold);
+}
+
+.divider:before,.divider:after{
+  content:"";
+  height:1px;
+  flex:1;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+
+.main-meta{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  color:var(--gold-soft);
+  font-size:1.25rem;
+  margin:0 0 22px;
+}
+
+.text-button{
+  background:none;
+  border:none;
+  color:var(--gold-soft);
+  font:inherit;
+  cursor:pointer;
+  padding:0;
+  width:auto;
+}
+
+.card{
+  min-height:360px;
+  border:2px solid var(--gold);
+  border-radius:14px;
+  background:var(--card);
+  color:var(--navy);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:44px 28px;
+  cursor:pointer;
+  box-shadow:0 10px 24px rgba(0,0,0,.12);
+}
+
+.card-inner{
+  width:100%;
+}
+
+.side-label{
+  text-align:right;
+  color:var(--navy);
+  font-size:1.05rem;
+  margin-bottom:42px;
+  opacity:.85;
+}
+
+.front{
+  font-size:clamp(2.5rem,8vw,5rem);
+  line-height:1.35;
+  word-break:break-word;
+}
+
+.back{
+  font-size:clamp(2rem,6vw,4rem);
+  line-height:1.4;
+  word-break:break-word;
+}
+
+.note-line{
+  width:min(520px,80%);
+  height:1px;
+  background:var(--gold);
+  margin:34px auto 28px;
+}
+
+.note{
+  font-size:clamp(1.15rem,3vw,1.8rem);
+  line-height:1.8;
+  white-space:pre-wrap;
+}
+
+.action-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:28px;
+  margin-top:30px;
+}
+
+button,.button-link{
+  border:2px solid var(--gold);
+  border-radius:10px;
+  background:transparent;
+  color:var(--gold-soft);
+  padding:20px 18px;
+  font:inherit;
+  font-size:1.35rem;
+  cursor:pointer;
+  text-align:center;
+  text-decoration:none;
+}
+
+.again{color:var(--red)}
+.remember{color:var(--green)}
+
+.footer{
+  margin-top:42px;
+  border-top:1px solid rgba(216,179,92,.55);
+  padding-top:28px;
+  line-height:2;
+  color:var(--cream);
+  font-size:1rem;
+}
+
+.admin-small{
+  margin-top:24px;
+  text-align:center;
+}
+
+.admin-small a{
+  display:inline-block;
+  border:1px solid var(--gold);
+  border-radius:8px;
+  color:var(--gold-soft);
+  padding:10px 20px;
+  text-decoration:none;
+  opacity:.72;
+}
+
+.panel{
+  border:2px solid var(--gold);
+  border-radius:14px;
+  padding:26px;
+  margin-bottom:26px;
+  background:rgba(0,0,0,.08);
+}
+
+input,textarea{
+  width:100%;
+  padding:14px 16px;
+  margin:8px 0 18px;
+  border:1px solid var(--gold);
+  border-radius:8px;
+  background:var(--card);
+  color:var(--navy);
+  font:inherit;
+}
+
+textarea{min-height:120px}
+
+.list{
+  max-height:480px;
+  overflow:auto;
+}
+
+.item{
+  border-bottom:1px solid rgba(216,179,92,.35);
+  padding:16px 0;
+}
+
+.item strong{color:var(--gold-soft)}
+
+.admin-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.danger{color:var(--red)}
+
+@media(max-width:620px){
+  .page{padding:38px 14px 28px}
+  .header{margin-bottom:42px}
+  .title{gap:10px}
+  .card{min-height:300px;padding:32px 20px}
+  .action-row,.admin-grid{grid-template-columns:1fr;gap:16px}
+  button,.button-link{font-size:1.12rem;padding:17px 14px}
+  .main-meta{font-size:1rem}
+  .english{font-size:.82rem}
+}
