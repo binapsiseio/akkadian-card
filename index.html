@@ -3,216 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>アッカド語単語カード｜Ishtar Gate</title>
+<title>アッカド語学習カード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-:root {
-  --blue-dark:#06172f;
-  --blue:#0f3d73;
-  --blue-light:#1d63b4;
-  --gold:#d8b35c;
-  --gold-light:#f1d58a;
-  --cream:#f8edd0;
-  --danger:#a63a2a;
-}
-* { box-sizing:border-box; }
-body {
-  margin:0;
-  min-height:100vh;
-  padding:14px;
-  color:white;
-  font-family:"Yu Mincho","Hiragino Mincho ProN",serif;
-  background:
-    radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 30%),
-    linear-gradient(180deg,#06172f,#0f3d73 45%,#0b2d57 100%);
-}
-.wrap { max-width:820px; margin:auto; }
-.frame {
-  background:linear-gradient(180deg,rgba(7,28,57,0.96),rgba(16,55,104,0.96));
-  border:4px solid var(--gold);
-  border-radius:24px;
-  overflow:hidden;
-  box-shadow:0 18px 45px rgba(0,0,0,0.45);
-}
-.top {
-  padding:26px 18px 16px;
-  text-align:center;
-  border-bottom:2px solid rgba(216,179,92,0.35);
-  background-image:
-    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size:42px 42px;
-}
-h1 { margin:0; font-size:1.8rem; letter-spacing:0.08em; color:var(--gold-light); }
-.sub { margin-top:8px; color:#d9c28c; font-size:0.95rem; }
-.cunei { margin-top:10px; font-size:1.15rem; letter-spacing:0.28em; color:#f0d38a; }
-.motifs { text-align:center; font-size:1.3rem; color:#f1d58a; letter-spacing:0.35em; margin-top:10px; }
-.content { padding:18px; }
-.card {
-  position:relative;
-  min-height:255px;
-  border-radius:18px;
-  background:linear-gradient(135deg,#133f77,#225fa8 55%,#0f325d);
-  border:3px solid var(--gold);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  padding:22px;
-  cursor:pointer;
-  overflow:hidden;
-  box-shadow:inset 0 0 35px rgba(255,255,255,0.05),0 10px 24px rgba(0,0,0,0.4);
-}
-.card:before {
-  content:"";
-  position:absolute;
-  inset:12px;
-  border:1px solid rgba(241,213,138,0.4);
-  border-radius:10px;
-}
-.card:after {
-  content:"𒀭 𒈗 𒂗 𒆠";
-  position:absolute;
-  bottom:10px;
-  left:0;
-  right:0;
-  font-size:0.85rem;
-  letter-spacing:0.5em;
-  color:rgba(255,230,170,0.25);
-}
-.card-inner { position:relative; z-index:1; width:100%; }
-.front { font-size:2.35rem; color:white; line-height:1.45; word-break:break-word; }
-.back { font-size:2rem; color:#fff0c8; font-weight:bold; line-height:1.45; word-break:break-word; }
-.note { margin-top:18px; line-height:1.7; font-size:1rem; color:#f5e3b4; white-space:pre-wrap; }
-.panel {
-  margin-top:18px;
-  padding:16px;
-  border-radius:18px;
-  background:rgba(5,20,42,0.7);
-  border:2px solid rgba(216,179,92,0.5);
-}
-.row { display:flex; flex-wrap:wrap; gap:8px; }
-button {
-  flex:1;
-  min-width:120px;
-  padding:12px;
-  border:none;
-  border-radius:999px;
-  background:linear-gradient(180deg,#f1d58a,#b78d3d);
-  color:#081f3f;
-  font-weight:bold;
-  cursor:pointer;
-  box-shadow:0 5px 0 #75561c;
-}
-button:active { transform:translateY(3px); box-shadow:0 2px 0 #75561c; }
-button.danger { background:linear-gradient(180deg,#dd796b,#a63a2a); color:white; box-shadow:0 5px 0 #6a1f18; }
-input,textarea {
-  width:100%;
-  padding:12px;
-  margin-top:8px;
-  margin-bottom:14px;
-  border-radius:12px;
-  border:2px solid #d8b35c;
-  background:var(--cream);
-  color:#1c1c1c;
-  font-size:1rem;
-}
-textarea { min-height:90px; }
-label { color:#f1d58a; font-weight:bold; }
-.hidden { display:none; }
-.small { color:#d9c28c; line-height:1.6; font-size:0.92rem; }
-.status { color:#fff0c8; line-height:1.6; }
-.list-item {
-  padding:10px 0;
-  border-bottom:1px solid rgba(216,179,92,0.25);
-}
-.list-item:last-child { border-bottom:none; }
-@media(max-width:520px){
-  body { padding:8px; }
-  .content { padding:12px; }
-  .card { min-height:225px; }
-  h1 { font-size:1.45rem; }
-  .front { font-size:1.9rem; }
-  .back { font-size:1.6rem; }
-  button { min-width:100%; }
-}
-</style>
+<link rel="stylesheet" href="./style.css">
 </head>
+
 <body>
-<div class="wrap">
-  <div class="frame">
-    <div class="top">
-      <h1>アッカド語単語カード</h1>
-      <div class="sub">Ishtar Gate Edition / Supabase Connected</div>
-      <div class="cunei">𒀭 𒊩𒌆𒀭𒈹 𒈗 𒂗 𒆠</div>
-      <div class="motifs">🦁 ✦ 🐂 ✦ 🐉</div>
-    </div>
+<main class="page">
 
-    <div class="content">
-      <div class="card" id="card">
-        <div class="card-inner"><div class="front">読み込み中...</div></div>
-      </div>
+<header class="header">
+  <div class="english">akkadian vocabulary</div>
+  <div class="title">
+    <span class="an-sign">𒀭</span>
+    <span>アッカド語学習カード</span>
+  </div>
+  <div class="divider">◆</div>
+</header>
 
-      <div class="panel">
-        <div class="row">
-          <button onclick="prevCard()">← 前</button>
-          <button onclick="nextCard()">次 →</button>
-          <button onclick="shuffleCards()">シャッフル</button>
-          <button onclick="loadCards()">再読込</button>
-        </div>
-        <p class="small">カードをタップすると表裏が切り替わります。単語データはSupabaseに保存されます。</p>
-        <p class="status" id="status"></p>
-      </div>
+<section>
+  <div class="main-meta">
+    <div id="counter">- / -</div>
+    <button class="text-button" onclick="nextRandom()">⇄ シャッフル</button>
+  </div>
 
-      <div class="panel" id="loginPanel">
-        <h2>管理者ログイン</h2>
-        <label>メールアドレス</label>
-        <input type="email" id="email" placeholder="管理者メールアドレス">
-        <label>パスワード</label>
-        <input type="password" id="password" placeholder="Supabase Authで設定したパスワード">
-        <div class="row">
-          <button onclick="login()">ログイン</button>
-          <button onclick="logout()">ログアウト</button>
-        </div>
-        <p class="small">ログインできる管理者だけが、単語の追加・編集・削除を行えます。</p>
-      </div>
-
-      <div class="panel hidden" id="adminPanel">
-        <h2>管理者メニュー</h2>
-
-        <input type="hidden" id="editId">
-
-        <label>表：音写</label>
-        <input type="text" id="frontInput" placeholder="例：ištar">
-
-        <label>裏：意味</label>
-        <input type="text" id="backInput" placeholder="例：イシュタル">
-
-        <label>例文・メモ</label>
-        <textarea id="noteInput" placeholder="例：愛と戦の女神"></textarea>
-
-        <div class="row">
-          <button onclick="saveCard()">保存</button>
-          <button onclick="clearForm()">入力クリア</button>
-          <button class="danger" onclick="deleteCurrentCard()">表示中カード削除</button>
-        </div>
-
-        <h3>登録済みカード</h3>
-        <div id="cardList" class="small"></div>
-      </div>
+  <div class="card" id="card">
+    <div class="card-inner">
+      <div class="front">読み込み中...</div>
     </div>
   </div>
-</div>
+
+  <div class="action-row">
+    <button class="again" onclick="nextRandom()">× もう一度</button>
+    <button class="remember" onclick="nextRandom()">✓ 覚えた</button>
+  </div>
+</section>
+
+<footer class="footer">
+  作成者: ビナプシ　X　
+  <a href="https://x.com/binapsi_meso" target="_blank">https://x.com/binapsi_meso</a><br>
+  参考文献:<br>
+  『アッカド語文法』青島忠一朗著（ヨベル社 2026）<br>
+  <a href="https://yobel.co.jp/info/book20260311/" target="_blank">https://yobel.co.jp/info/book20260311/</a>
+
+  <div class="admin-small">
+    <a href="./admin.html">管理者ログイン</a>
+  </div>
+</footer>
+
+</main>
 
 <script>
-const SUPABASE_URL = "https://dkfltvfoxmhinnfodcvc.supabase.co";
-const SUPABASE_KEY = "sb_publishable_W_e4VNpoaM1mdtmmNi6f8w_ijLC-Yw5";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = supabase.createClient(
+  "https://dkfltvfoxmhinnfodcvc.supabase.co",
+  "sb_publishable_W_e4VNpoaM1mdtmmNi6f8w_ijLC-Yw5"
+);
 
 let cards = [];
 let current = 0;
 let showingFront = true;
-let session = null;
+let shownIndexes = [];
 
 function escapeHtml(text){
   return String(text || "")
@@ -223,227 +75,88 @@ function escapeHtml(text){
     .replaceAll("'","&#039;");
 }
 
-function setStatus(message){
-  document.getElementById("status").textContent = message || "";
-}
-
-async function checkSession(){
-  const res = await supabaseClient.auth.getSession();
-  session = res.data.session;
-  document.getElementById("adminPanel").classList.toggle("hidden", !session);
-  if(session){
-    setStatus("管理者ログイン中：" + session.user.email);
-  }
-}
-
 async function loadCards(){
-  setStatus("読み込み中...");
   const { data, error } = await supabaseClient
     .from("cards")
-    .select("id,front,back,note,created_at")
-    .order("created_at", { ascending:true });
+    .select("*");
 
   if(error){
-    console.error(error);
-    setStatus("読み込みエラー：" + error.message);
-    render();
+    document.getElementById("card").innerHTML =
+      '<div class="card-inner"><div class="front">読み込みエラー</div></div>';
     return;
   }
 
   cards = data || [];
-  if(current >= cards.length) current = 0;
-  showingFront = true;
-  render();
-  renderList();
-  setStatus(cards.length + "件のカードを読み込みました");
+  shownIndexes = [];
+
+  if(cards.length > 0){
+    nextRandom();
+  }else{
+    render();
+  }
+}
+
+function pickRandomIndex(){
+  if(cards.length <= 1) return 0;
+
+  if(shownIndexes.length >= cards.length){
+    shownIndexes = [];
+  }
+
+  let index;
+  do{
+    index = Math.floor(Math.random() * cards.length);
+  }while(shownIndexes.includes(index) && shownIndexes.length < cards.length);
+
+  shownIndexes.push(index);
+  return index;
 }
 
 function render(){
   const card = document.getElementById("card");
+  const counter = document.getElementById("counter");
 
   if(cards.length === 0){
+    counter.textContent = "0 / 0";
     card.innerHTML = '<div class="card-inner"><div class="front">カードがありません</div></div>';
     return;
   }
 
+  counter.textContent = (shownIndexes.length || 1) + " / " + cards.length;
   const c = cards[current];
 
   if(showingFront){
-    card.innerHTML = '<div class="card-inner"><div class="front">' + escapeHtml(c.front) + '</div></div>';
-  } else {
-    card.innerHTML =
-      '<div class="card-inner">' +
-      '<div class="back">' + escapeHtml(c.back) + '</div>' +
-      '<div class="note">' + escapeHtml(c.note || "") + '</div>' +
-      '</div>';
+    card.innerHTML = `
+      <div class="card-inner">
+        <div class="side-label">音写</div>
+        <div class="front">${escapeHtml(c.front)}</div>
+      </div>
+    `;
+  }else{
+    card.innerHTML = `
+      <div class="card-inner">
+        <div class="side-label">意味</div>
+        <div class="back">${escapeHtml(c.back)}</div>
+        ${c.note ? '<div class="note-line"></div><div class="note">' + escapeHtml(c.note) + '</div>' : ''}
+      </div>
+    `;
   }
 }
 
-document.getElementById("card").addEventListener("click", function(){
+document.getElementById("card").addEventListener("click",()=>{
   if(cards.length === 0) return;
   showingFront = !showingFront;
   render();
 });
 
-function nextCard(){
+function nextRandom(){
   if(cards.length === 0) return;
-  current = (current + 1) % cards.length;
+  current = pickRandomIndex();
   showingFront = true;
   render();
 }
 
-function prevCard(){
-  if(cards.length === 0) return;
-  current = (current - 1 + cards.length) % cards.length;
-  showingFront = true;
-  render();
-}
-
-function shuffleCards(){
-  cards.sort(function(){ return Math.random() - 0.5; });
-  current = 0;
-  showingFront = true;
-  render();
-  renderList();
-}
-
-async function login(){
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-
-  if(!email || !password){
-    alert("メールアドレスとパスワードを入力してください");
-    return;
-  }
-
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
-  if(error){
-    alert("ログインできません：" + error.message);
-    return;
-  }
-
-  session = data.session;
-  await checkSession();
-  await loadCards();
-}
-
-async function logout(){
-  await supabaseClient.auth.signOut();
-  session = null;
-  document.getElementById("adminPanel").classList.add("hidden");
-  setStatus("ログアウトしました");
-}
-
-function clearForm(){
-  document.getElementById("editId").value = "";
-  document.getElementById("frontInput").value = "";
-  document.getElementById("backInput").value = "";
-  document.getElementById("noteInput").value = "";
-}
-
-async function saveCard(){
-  if(!session){
-    alert("管理者ログインが必要です");
-    return;
-  }
-
-  const id = document.getElementById("editId").value;
-  const front = document.getElementById("frontInput").value.trim();
-  const back = document.getElementById("backInput").value.trim();
-  const note = document.getElementById("noteInput").value.trim();
-
-  if(!front || !back){
-    alert("表と裏は必須です");
-    return;
-  }
-
-  let result;
-
-  if(id){
-    result = await supabaseClient
-      .from("cards")
-      .update({ front, back, note })
-      .eq("id", id);
-  } else {
-    result = await supabaseClient
-      .from("cards")
-      .insert({ front, back, note });
-  }
-
-  if(result.error){
-    alert("保存エラー：" + result.error.message);
-    return;
-  }
-
-  clearForm();
-  await loadCards();
-  alert("保存しました");
-}
-
-function editCard(index){
-  const c = cards[index];
-  document.getElementById("editId").value = c.id;
-  document.getElementById("frontInput").value = c.front;
-  document.getElementById("backInput").value = c.back;
-  document.getElementById("noteInput").value = c.note || "";
-  current = index;
-  showingFront = true;
-  render();
-  window.scrollTo({ top:document.getElementById("adminPanel").offsetTop, behavior:"smooth" });
-}
-
-async function deleteCurrentCard(){
-  if(!session){
-    alert("管理者ログインが必要です");
-    return;
-  }
-  if(cards.length === 0) return;
-
-  const c = cards[current];
-  if(!confirm("表示中のカードを削除しますか？")) return;
-
-  const { error } = await supabaseClient
-    .from("cards")
-    .delete()
-    .eq("id", c.id);
-
-  if(error){
-    alert("削除エラー：" + error.message);
-    return;
-  }
-
-  current = 0;
-  showingFront = true;
-  await loadCards();
-}
-
-function renderList(){
-  const area = document.getElementById("cardList");
-  if(!area) return;
-
-  if(cards.length === 0){
-    area.innerHTML = "登録カードなし";
-    return;
-  }
-
-  area.innerHTML = cards.map(function(c, i){
-    return '<div class="list-item">' +
-      '<strong>' + escapeHtml(c.front) + '</strong> / ' + escapeHtml(c.back) +
-      '<br><button onclick="editCard(' + i + ')">編集</button>' +
-      '</div>';
-  }).join("");
-}
-
-supabaseClient.auth.onAuthStateChange(async function(event, newSession){
-  session = newSession;
-  document.getElementById("adminPanel").classList.toggle("hidden", !session);
-});
-
-(async function init(){
-  await checkSession();
-  await loadCards();
-})();
+loadCards();
 </script>
 </body>
 </html>
