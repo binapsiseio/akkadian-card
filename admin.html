@@ -155,8 +155,10 @@ async function login(){
   }
 
   currentSession = result.data.session;
+  localStorage.setItem("excludeAnalytics", "true");
+
   showAdmin(true);
-  setText("loginStatus", "ログイン中: " + currentSession.user.email);
+  setText("loginStatus", "ログイン中: " + currentSession.user.email + "（この端末はAnalytics除外）");
 
   await loadAll();
 }
@@ -179,8 +181,10 @@ async function ensureLogin(){
     return false;
   }
 
+  localStorage.setItem("excludeAnalytics", "true");
+
   showAdmin(true);
-  setText("loginStatus", "ログイン中: " + session.user.email);
+  setText("loginStatus", "ログイン中: " + session.user.email + "（この端末はAnalytics除外）");
   return true;
 }
 
@@ -642,8 +646,10 @@ async function uploadCSV(){
   const session = await getSession();
 
   if(session){
+    localStorage.setItem("excludeAnalytics", "true");
+
     showAdmin(true);
-    setText("loginStatus", "ログイン中: " + session.user.email);
+    setText("loginStatus", "ログイン中: " + session.user.email + "（この端末はAnalytics除外）");
     await loadAll();
   }else{
     showAdmin(false);
