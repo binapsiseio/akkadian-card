@@ -612,3 +612,19 @@ textarea{
     font-size:.86rem;
   }
 }
+
+.reverse-row{
+  text-align:center;
+  margin-top:14px;
+}
+
+.reverse-link{
+  display:inline-block;
+  color:var(--gold-soft);
+  text-decoration:none;
+  font-size:.92rem;
+}
+
+.reverse-link:hover{
+  opacity:.8;
+}
