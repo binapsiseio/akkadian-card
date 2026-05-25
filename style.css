@@ -333,6 +333,7 @@ button,
 }
 
 .footer{
+  width:100%;
   margin-top:28px;
   border-top:1px solid rgba(216,179,92,.45);
   padding-top:20px;
@@ -574,6 +575,7 @@ textarea{
   }
 
   .footer{
+    width:100%;
     font-size:.8rem;
     margin-top:24px;
     padding-top:18px;
