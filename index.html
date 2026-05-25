@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>アッカド語学習カード</title>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-BSCQ8PV91S"></script>
+<script>
+window.dataLayer=window.dataLayer||[];
+function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());
+gtag('config','G-BSCQ8PV91S');
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,10 +25,7 @@
 
 <header class="header">
   <div class="english">akkadian vocabulary</div>
-  <div class="title">
-    <span class="an-sign">𒀭</span>
-    <span>アッカド語学習カード</span>
-  </div>
+  <div class="title"><span class="an-sign">𒀭</span><span>アッカド語学習カード</span></div>
   <div class="divider">◆</div>
 </header>
 
@@ -43,14 +49,16 @@
     </div>
 
     <div class="card" id="card">
-      <div class="card-inner">
-        <div class="front">読み込み中...</div>
-      </div>
+      <div class="card-inner"><div class="front">読み込み中...</div></div>
     </div>
 
     <div class="action-row">
       <button class="again" onclick="previousCard()" type="button">× もう一度</button>
       <button class="remember" onclick="rememberAndNext()" type="button">✓ 覚えた</button>
+    </div>
+
+    <div class="reverse-row">
+      <button class="reverse-button" id="reverseButton" onclick="toggleReverseMode()" type="button">日本語から出題</button>
     </div>
   </section>
 
@@ -68,31 +76,28 @@
   参考文献:<br>
   『アッカド語文法』青島忠一朗著（ヨベル社 2026）<br>
   <a href="https://yobel.co.jp/info/book20260311/" target="_blank">https://yobel.co.jp/info/book20260311/</a>
-
-  <div class="admin-small">
-    <a href="./admin.html">管理者ログイン</a>
-  </div>
+  <div class="admin-small"><a href="./admin.html">管理者ログイン</a></div>
 </footer>
 
 </main>
 
 <script>
-const supabaseClient = supabase.createClient(
+const supabaseClient=supabase.createClient(
   "https://dkfltvfoxmhinnfodcvc.supabase.co",
   "sb_publishable_W_e4VNpoaM1mdtmmNi6f8w_ijLC-Yw5"
 );
 
-let allCards = [];
-let cards = [];
-let levels = [];
-let deck = [];
-let position = 0;
-let showingFront = true;
-
-const LEARNED_KEY = "akkad_learned_cards_v1";
+let allCards=[];
+let cards=[];
+let levels=[];
+let deck=[];
+let position=0;
+let showingFront=true;
+let reverseMode=false;
+const LEARNED_KEY="akkad_learned_cards_v1";
 
 function escapeHtml(text){
-  return String(text || "")
+  return String(text||"")
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
     .replaceAll(">","&gt;")
@@ -101,163 +106,185 @@ function escapeHtml(text){
 }
 
 async function loadLevels(){
-  const { data, error } = await supabaseClient
+  const {data,error}=await supabaseClient
     .from("levels")
     .select("*")
-    .order("sort_order", { ascending:true });
+    .order("sort_order",{ascending:true});
 
   if(error){
-    levels = [];
+    levels=[];
     return;
   }
 
-  levels = data || [];
-  const select = document.getElementById("levelFilter");
-
-  select.innerHTML =
-    '<option value="all">すべて</option>' +
-    levels.map(level => `<option value="${escapeHtml(level.name)}">${escapeHtml(level.name)}</option>`).join("");
+  levels=data||[];
+  const select=document.getElementById("levelFilter");
+  select.innerHTML='<option value="all">すべて</option>'+
+    levels.map(level=>`<option value="${escapeHtml(level.name)}">${escapeHtml(level.name)}</option>`).join("");
 }
 
 async function loadCards(){
   await loadLevels();
 
-  const { data, error } = await supabaseClient
+  const {data,error}=await supabaseClient
     .from("cards")
     .select("*");
 
   if(error){
-    document.getElementById("card").innerHTML =
-      '<div class="card-inner"><div class="front">読み込みエラー</div></div>';
+    document.getElementById("card").innerHTML='<div class="card-inner"><div class="front">読み込みエラー</div></div>';
     return;
   }
 
-  allCards = data || [];
+  allCards=data||[];
   applyLevelFilter();
 }
 
 function applyLevelFilter(){
-  const level = document.getElementById("levelFilter").value;
-
-  cards = level === "all"
-    ? allCards.slice()
-    : allCards.filter(card => (card.level || "") === level);
-
+  const level=document.getElementById("levelFilter").value;
+  cards=level==="all" ? allCards.slice() : allCards.filter(card=>(card.level||"")===level);
   shuffleDeck();
 }
 
 function makeShuffledDeck(){
-  deck = cards.map((_, index) => index);
+  deck=cards.map((_,index)=>index);
 
-  for(let i = deck.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+  for(let i=deck.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [deck[i],deck[j]]=[deck[j],deck[i]];
   }
 
-  position = 0;
+  position=0;
 }
 
 function getCurrentCard(){
-  if(cards.length === 0 || deck.length === 0) return null;
+  if(cards.length===0||deck.length===0)return null;
   return cards[deck[position]];
 }
 
+function getDisplayData(card){
+  if(!reverseMode){
+    return {
+      frontLabel:"音写",
+      frontText:card.front,
+      backLabel:"意味",
+      backText:card.back,
+      note:card.note||""
+    };
+  }
+
+  return {
+    frontLabel:"意味",
+    frontText:card.back,
+    backLabel:"音写",
+    backText:card.front,
+    note:card.note||""
+  };
+}
+
 function render(){
-  const card = document.getElementById("card");
-  const counter = document.getElementById("counter");
-  const c = getCurrentCard();
+  const card=document.getElementById("card");
+  const counter=document.getElementById("counter");
+  const c=getCurrentCard();
 
   if(!c){
-    counter.textContent = "0 / 0";
-    card.innerHTML = '<div class="card-inner"><div class="front">カードがありません</div></div>';
+    counter.textContent="0 / 0";
+    card.innerHTML='<div class="card-inner"><div class="front">カードがありません</div></div>';
     return;
   }
 
-  counter.textContent = (position + 1) + " / " + cards.length;
+  counter.textContent=(position+1)+" / "+cards.length;
+  const display=getDisplayData(c);
 
   if(showingFront){
-    card.innerHTML = `
+    card.innerHTML=`
       <div class="card-inner">
-        <div class="side-label">音写</div>
-        <div class="card-content">
-          <div class="front">${escapeHtml(c.front)}</div>
-        </div>
+        <div class="side-label">${escapeHtml(display.frontLabel)}</div>
+        <div class="card-content"><div class="front">${escapeHtml(display.frontText)}</div></div>
       </div>
     `;
   }else{
-    card.innerHTML = `
+    card.innerHTML=`
       <div class="card-inner">
-        <div class="side-label">意味</div>
+        <div class="side-label">${escapeHtml(display.backLabel)}</div>
         <div class="card-content">
-          <div class="back">${escapeHtml(c.back)}</div>
-          ${c.note ? '<div class="note-line"></div><div class="note">' + escapeHtml(c.note) + '</div>' : ''}
+          <div class="back">${escapeHtml(display.backText)}</div>
+          ${display.note ? '<div class="note-line"></div><div class="note">'+escapeHtml(display.note)+'</div>' : ''}
         </div>
       </div>
     `;
   }
 }
 
-document.getElementById("card").addEventListener("click", () => {
-  if(cards.length === 0) return;
-  showingFront = !showingFront;
+document.getElementById("card").addEventListener("click",()=>{
+  if(cards.length===0)return;
+  showingFront=!showingFront;
   render();
 });
 
 function nextCard(){
-  if(cards.length === 0) return;
+  if(cards.length===0)return;
 
   position++;
 
-  if(position >= deck.length){
+  if(position>=deck.length){
     makeShuffledDeck();
   }
 
-  showingFront = true;
+  showingFront=true;
   render();
 }
 
 function previousCard(){
-  if(cards.length === 0) return;
+  if(cards.length===0)return;
 
-  if(position > 0){
+  if(position>0){
     position--;
   }
 
-  showingFront = true;
+  showingFront=true;
   render();
 }
 
 function shuffleDeck(){
-  if(cards.length === 0){
-    deck = [];
-    position = 0;
+  if(cards.length===0){
+    deck=[];
+    position=0;
     render();
     return;
   }
 
   makeShuffledDeck();
-  showingFront = true;
+  showingFront=true;
+  render();
+}
+
+function toggleReverseMode(){
+  reverseMode=!reverseMode;
+  showingFront=true;
+
+  const button=document.getElementById("reverseButton");
+  button.textContent=reverseMode ? "アッカド語から出題" : "日本語から出題";
+
   render();
 }
 
 function getLearned(){
   try{
-    return JSON.parse(localStorage.getItem(LEARNED_KEY)) || [];
+    return JSON.parse(localStorage.getItem(LEARNED_KEY))||[];
   }catch(e){
     return [];
   }
 }
 
 function saveLearned(list){
-  localStorage.setItem(LEARNED_KEY, JSON.stringify(list));
+  localStorage.setItem(LEARNED_KEY,JSON.stringify(list));
 }
 
 function rememberCurrentCard(){
-  const c = getCurrentCard();
-  if(!c) return;
+  const c=getCurrentCard();
+  if(!c)return;
 
-  const list = getLearned();
-  const exists = list.some(item => item.id === c.id);
+  const list=getLearned();
+  const exists=list.some(item=>item.id===c.id);
 
   if(!exists){
     list.unshift({
@@ -277,15 +304,15 @@ function rememberAndNext(){
 }
 
 function renderLearnedList(){
-  const area = document.getElementById("learnedList");
-  const list = getLearned();
+  const area=document.getElementById("learnedList");
+  const list=getLearned();
 
-  if(list.length === 0){
-    area.innerHTML = '<div class="empty-message">まだ学習済みの単語はありません。</div>';
+  if(list.length===0){
+    area.innerHTML='<div class="empty-message">まだ学習済みの単語はありません。</div>';
     return;
   }
 
-  area.innerHTML = list.map(item => `
+  area.innerHTML=list.map(item=>`
     <div class="learned-item">
       <span class="learned-front">${escapeHtml(item.front)}</span>
       <span class="learned-back">${escapeHtml(item.back)}</span>
@@ -294,19 +321,19 @@ function renderLearnedList(){
 }
 
 function clearLearned(){
-  if(!confirm("学習済み履歴をすべて削除しますか？")) return;
+  if(!confirm("学習済み履歴をすべて削除しますか？"))return;
   localStorage.removeItem(LEARNED_KEY);
   renderLearnedList();
 }
 
 function showTab(name){
-  const isStudy = name === "study";
+  const isStudy=name==="study";
 
-  document.getElementById("studyTab").classList.toggle("hidden", !isStudy);
-  document.getElementById("learnedTab").classList.toggle("hidden", isStudy);
+  document.getElementById("studyTab").classList.toggle("hidden",!isStudy);
+  document.getElementById("learnedTab").classList.toggle("hidden",isStudy);
 
-  document.getElementById("studyTabButton").classList.toggle("active", isStudy);
-  document.getElementById("learnedTabButton").classList.toggle("active", !isStudy);
+  document.getElementById("studyTabButton").classList.toggle("active",isStudy);
+  document.getElementById("learnedTabButton").classList.toggle("active",!isStudy);
 
   if(!isStudy){
     renderLearnedList();
