@@ -5,12 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>アッカド語学習カード</title>
 
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-BSCQ8PV91S"></script>
 <script>
-window.dataLayer=window.dataLayer||[];
-function gtag(){dataLayer.push(arguments);}
-gtag('js',new Date());
-gtag('config','G-BSCQ8PV91S');
+(function(){
+  if(localStorage.getItem("excludeAnalytics") === "true"){
+    return;
+  }
+
+  var script = document.createElement("script");
+  script.async = true;
+  script.src = "https://www.googletagmanager.com/gtag/js?id=G-BSCQ8PV91S";
+  document.head.appendChild(script);
+
+  window.dataLayer = window.dataLayer || [];
+
+  function gtag(){
+    dataLayer.push(arguments);
+  }
+
+  window.gtag = gtag;
+
+  gtag("js", new Date());
+  gtag("config", "G-BSCQ8PV91S");
+})();
 </script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
