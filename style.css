@@ -92,7 +92,7 @@ a{
 .filter-row{
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-end;
   gap:12px;
   color:var(--gold-soft);
   font-size:.9rem;
