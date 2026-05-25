@@ -481,10 +481,14 @@ textarea{
     margin-top:16px;
   }
 
-  .filter-row{
-    font-size:.84rem;
-  }
 
+.filter-row{
+  justify-content:flex-end;
+  gap:10px;
+  font-size:.84rem;
+}
+
+  
   .level-select{
     min-width:112px;
     padding:7px 8px;
