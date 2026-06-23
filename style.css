@@ -639,16 +639,3 @@ textarea{
   opacity:.8;
 }
 
-
-.pronunciation-row{
-  display:flex;
-  justify-content:center;
-  margin-top:14px;
-  margin-bottom:10px;
-}
-
-.disabled-link{
-  opacity:.35;
-  pointer-events:none;
-  cursor:default;
-}
