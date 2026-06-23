@@ -78,12 +78,6 @@
       <div class="card-inner"><div class="front">読み込み中...</div></div>
     </div>
 
-<div class="pronunciation-row">
-  <a href="#" class="reverse-link" id="speakLink" onclick="speakCurrentCard(); return false;">
-    ▶発音
-  </a>
-</div>
-    
     <div class="action-row">
       <button class="again" onclick="previousCard()" type="button">× もう一度</button>
       <button class="remember" onclick="rememberAndNext()" type="button">✓ 覚えた</button>
@@ -244,8 +238,7 @@ function render(){
       </div>
     `;
   }
-  updateSpeakLink();
-    }
+}
 
 document.getElementById("card").addEventListener("click",()=>{
   if(cards.length===0)return;
@@ -300,45 +293,6 @@ function toggleReverseMode(){
   render();
 }
 
-function updateSpeakLink(){
-  const link = document.getElementById("speakLink");
-  if(!link) return;
-
-  if(showingFront && !reverseMode){
-    link.classList.remove("disabled-link");
-    link.setAttribute("aria-disabled", "false");
-  }else{
-    link.classList.add("disabled-link");
-    link.setAttribute("aria-disabled", "true");
-  }
-}
-
-function akkadianToSpeechText(text){
-  return String(text || "")
-    .replaceAll("ṭ", "ts")
-    .replaceAll("Ṭ", "ts")
-    .replaceAll("ḫ", "خ")
-    .replaceAll("Ḫ", "خ");
-}
-
-function speakCurrentCard(){
-  const link = document.getElementById("speakLink");
-  if(link && link.classList.contains("disabled-link")) return;
-
-  const c = getCurrentCard();
-  if(!c) return;
-
-  const text = akkadianToSpeechText(c.front);
-
-  speechSynthesis.cancel();
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "ar";
-  utterance.rate = 0.95;
-
-  speechSynthesis.speak(utterance);
-}
-  
 function getLearned(){
   try{
     return JSON.parse(localStorage.getItem(LEARNED_KEY))||[];
